@@ -6,6 +6,7 @@
 // @updateURL   https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
 // @downloadURL https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
 // @match        https://ci-en.dlsite.com/creator/*/article/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=ci-en.dlsite.com
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_listValues
