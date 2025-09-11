@@ -3,8 +3,8 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  特定ユーザーのコメントを非表示にする
-// @updateURL   https://github.com/riyonasan/ci-en-mute/raw/main/cien-comment-mute.user.js
-// @downloadURL https://github.com/riyonasan/ci-en-mute/raw/main/cien-comment-mute.user.js
+// @updateURL   https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
+// @downloadURL https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
 // @match        https://ci-en.dlsite.com/creator/*/article/*
 // @grant        GM_setValue
 // @grant        GM_getValue
