@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Ci-en Comment Mute
 // @name:en      Ci-en Comment Mute
-// @namespace    https://github.com/riyonasan/
-// @version      1.1
+// @namespace    https://github.com/riyonasan/Cien-Comment-Mute
+// @version      1.2
 // @description  Ci-en(DLsite)で特定ユーザーのコメントを非表示にする
 // @description:en  Hides comments from specific users on Ci-en(DLsite)
 // @updateURL   https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
@@ -20,7 +20,7 @@
 (function () {
   "use strict";
 
-  let cachedMuted = new Set();
+  let cachedMuted = new Map(); // { id -> {id, name?} }
   let showMuted = false;
 
   function getMutedUsers() {
@@ -29,11 +29,19 @@
       .map((k) => GM_getValue(k));
   }
   function updateCache() {
-    cachedMuted = new Set(getMutedUsers());
+    cachedMuted.clear();
+    getMutedUsers().forEach((entry) => {
+      if (typeof entry === "string") {
+        // 旧形式（idだけ）
+        cachedMuted.set(entry, { id: entry });
+      } else if (entry && typeof entry === "object") {
+        cachedMuted.set(entry.id, entry);
+      }
+    });
   }
 
-  function muteUser(id) {
-    GM_setValue("mute_" + id, id);
+  function muteUser(id, name) {
+    GM_setValue("mute_" + id, { id, name });
     updateCache();
   }
   function unmuteUser(id) {
@@ -81,7 +89,8 @@
     btn.style.cursor = "pointer";
     btn.innerHTML = '<i class="fa-solid fa-ban"></i>';
     btn.onclick = () => {
-      muteUser(userId);
+      const userName = userLink.textContent.trim();
+      muteUser(userId, userName);
       li.dataset.muted = "1";
       if (!showMuted) li.style.display = "none";
       renderPanel();
@@ -120,12 +129,12 @@
     if (!panel) return;
     panel.innerHTML = "";
 
-    const arr = Array.from(cachedMuted);
+    const arr = Array.from(cachedMuted.values());
     if (arr.length === 0) {
       panel.textContent = "ミュート中のユーザーはいません";
       return;
     }
-    arr.forEach((uid) => {
+    arr.forEach((entry) => {
       const row = document.createElement("div");
       row.style.display = "flex";
       row.style.alignItems = "center";
@@ -133,19 +142,19 @@
       row.style.marginBottom = "6px";
 
       const link = document.createElement("a");
-      link.href = `https://ci-en.dlsite.com/profile/${uid}`;
-      link.textContent = `ユーザー ${uid}`;
+      link.href = `https://ci-en.dlsite.com/profile/${entry.id}`;
+      link.textContent = entry.name ? `${entry.name} (${entry.id})` : `ユーザー ${entry.id}`;
       link.target = "_blank";
 
       const btn = document.createElement("button");
       btn.className = "ci-unmute-btn";
-      btn.dataset.userid = uid;
+      btn.dataset.userid = entry.id;
       btn.title = "アンミュート";
       btn.textContent = "解除";
       btn.style.marginLeft = "8px";
 
       btn.onclick = () => {
-        unmuteUser(uid);
+        unmuteUser(entry.id);
         renderPanel();
         // コメント再スキャン
         scanComments();
