@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         Ci-en Comment Mute
-// @namespace    http://tampermonkey.net/
+// @name:en      Ci-en Comment Mute
+// @namespace    https://github.com/riyonasan/
 // @version      1.1
-// @description  特定ユーザーのコメントを非表示にする
+// @description  Ci-en(DLsite)で特定ユーザーのコメントを非表示にする
+// @description:en  Hides comments from specific users on Ci-en(DLsite)
 // @updateURL   https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
 // @downloadURL https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
 // @match        https://ci-en.dlsite.com/creator/*/article/*
@@ -12,6 +14,7 @@
 // @grant        GM_listValues
 // @grant        GM_deleteValue
 // @require      https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js
+// @license      MIT
 // ==/UserScript==
 
 (function () {
@@ -21,12 +24,22 @@
   let showMuted = false;
 
   function getMutedUsers() {
-    return GM_listValues().filter(k => k.startsWith("mute_")).map(k => GM_getValue(k));
+    return GM_listValues()
+      .filter((k) => k.startsWith("mute_"))
+      .map((k) => GM_getValue(k));
   }
-  function updateCache() { cachedMuted = new Set(getMutedUsers()); }
+  function updateCache() {
+    cachedMuted = new Set(getMutedUsers());
+  }
 
-  function muteUser(id) { GM_setValue("mute_" + id, id); updateCache(); }
-  function unmuteUser(id) { GM_deleteValue("mute_" + id); updateCache(); }
+  function muteUser(id) {
+    GM_setValue("mute_" + id, id);
+    updateCache();
+  }
+  function unmuteUser(id) {
+    GM_deleteValue("mute_" + id);
+    updateCache();
+  }
 
   // コメント処理
   function processComment(li) {
@@ -112,7 +125,7 @@
       panel.textContent = "ミュート中のユーザーはいません";
       return;
     }
-    arr.forEach(uid => {
+    arr.forEach((uid) => {
       const row = document.createElement("div");
       row.style.display = "flex";
       row.style.alignItems = "center";
@@ -148,7 +161,7 @@
     showMuted = !showMuted;
     const t = document.getElementById("ci-toggle-muted");
     t.textContent = showMuted ? "ミュート再非表示" : "ミュート再表示";
-    document.querySelectorAll("li[data-muted='1']").forEach(li => {
+    document.querySelectorAll("li[data-muted='1']").forEach((li) => {
       li.style.display = showMuted ? "" : "none";
     });
   }
@@ -176,6 +189,8 @@
   scanComments();
 
   // コメント欄の変化を監視
-  const observer = new MutationObserver(() => { scanComments(); });
+  const observer = new MutationObserver(() => {
+    scanComments();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 })();
