@@ -2,7 +2,7 @@
 // @name         Ci-en Comment Mute
 // @name:en      Ci-en Comment Mute
 // @namespace    https://github.com/riyonasan/Cien-Comment-Mute
-// @version      1.2
+// @version      1.3
 // @description  Ci-en(DLsite)で特定ユーザーのコメントを非表示にする
 // @description:en  Hides comments from specific users on Ci-en(DLsite)
 // @updateURL   https://github.com/riyonasan/Cien-Comment-Mute/raw/main/cien-comment-mute.user.js
@@ -20,8 +20,9 @@
 (function () {
   "use strict";
 
-  let cachedMuted = new Map(); // { id -> {id, name?} }
+  let cachedMuted = new Map();
   let showMuted = false;
+  let isProcessing = false;
 
   function getMutedUsers() {
     return GM_listValues()
@@ -32,7 +33,6 @@
     cachedMuted.clear();
     getMutedUsers().forEach((entry) => {
       if (typeof entry === "string") {
-        // 旧形式（idだけ）
         cachedMuted.set(entry, { id: entry });
       } else if (entry && typeof entry === "object") {
         cachedMuted.set(entry.id, entry);
@@ -49,36 +49,45 @@
     updateCache();
   }
 
-  // コメント処理
   function processComment(li) {
-    if (li.dataset.muteProcessed) return;
-    li.dataset.muteProcessed = "1";
+    if (li.dataset.userid && li.querySelector(".ci-mute-btn")) return;
 
     const userLink = li.querySelector("a[href*='/profile/']");
     if (!userLink) return;
     const match = userLink.href.match(/\/profile\/(\d+)/);
     if (!match) return;
     const userId = match[1];
+    const userName = userLink.textContent.trim();
+
     li.dataset.userid = userId;
+    li.dataset.muted = cachedMuted.has(userId) ? "1" : "0";
+    li.style.display = cachedMuted.has(userId) && !showMuted ? "none" : "";
 
-    // ミュート済みなら非表示
-    if (cachedMuted.has(userId)) {
-      li.dataset.muted = "1";
-      if (!showMuted) li.style.display = "none";
-    }
-
-    // ミュートボタン追加
-    attachMuteBtnToLi(li, userId, userLink);
+    const oldBtn = li.querySelector(".ci-mute-btn");
+    if (oldBtn) oldBtn.remove();
+    attachMuteBtnToLi(li, userId, userName, userLink);
   }
 
   function scanComments() {
-    const commentList = document.querySelector("#comment > div:nth-child(3) > div > ul");
-    if (!commentList) return;
-    commentList.querySelectorAll("li").forEach(processComment);
+    if (isProcessing) return;
+    isProcessing = true;
+    try {
+      const commentList = document.querySelector("#comment > div:nth-child(3) > div > ul");
+      if (commentList) {
+        commentList.querySelectorAll("li").forEach(processComment);
+
+        if (!commentList.dataset.muteObserving) {
+          commentList.dataset.muteObserving = "1";
+          observer.disconnect();
+          observer.observe(commentList, { childList: true, subtree: true });
+        }
+      }
+    } finally {
+      isProcessing = false;
+    }
   }
 
-  function attachMuteBtnToLi(li, userId, userLink) {
-    if (li.querySelector(".ci-mute-btn")) return;
+  function attachMuteBtnToLi(li, userId, userName, userLink) {
     const btn = document.createElement("button");
     btn.className = "ci-mute-btn";
     btn.dataset.userid = userId;
@@ -89,7 +98,6 @@
     btn.style.cursor = "pointer";
     btn.innerHTML = '<i class="fa-solid fa-ban"></i>';
     btn.onclick = () => {
-      const userName = userLink.textContent.trim();
       muteUser(userId, userName);
       li.dataset.muted = "1";
       if (!showMuted) li.style.display = "none";
@@ -98,7 +106,6 @@
     userLink.insertAdjacentElement("afterend", btn);
   }
 
-  // ウィジェット作成
   function buildWidget() {
     if (document.getElementById("ciMuteWidget")) return;
     const w = document.createElement("div");
@@ -123,7 +130,6 @@
     document.body.appendChild(w);
   }
 
-  // パネル描画
   function renderPanel() {
     const panel = document.getElementById("ci-panel");
     if (!panel) return;
@@ -156,7 +162,10 @@
       btn.onclick = () => {
         unmuteUser(entry.id);
         renderPanel();
-        // コメント再スキャン
+        // ミュート解除時はdata-processedをリセットして再スキャン
+        document.querySelectorAll("li[data-userid]").forEach((li) => {
+          delete li.dataset.userid; // 再処理させる
+        });
         scanComments();
       };
 
@@ -175,7 +184,6 @@
     });
   }
 
-  // ヘッダーボタンイベント
   function bindWidgetEvents() {
     document.addEventListener("click", (ev) => {
       if (ev.target.closest("#ci-toggle-muted")) {
@@ -191,13 +199,12 @@
     });
   }
 
-  // 初期化
   updateCache();
   buildWidget();
   bindWidgetEvents();
   scanComments();
 
-  // コメント欄の変化を監視
+  // 最初は body 全体を監視してコメントリストの出現を待つ
   const observer = new MutationObserver(() => {
     scanComments();
   });
