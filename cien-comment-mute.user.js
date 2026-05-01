@@ -49,24 +49,25 @@
     updateCache();
   }
 
-  function processComment(li) {
-    if (li.dataset.userid && li.querySelector(".ci-mute-btn")) return;
+function processComment(li) {
+  const userLink = li.querySelector("a[href*='/profile/']");
+  if (!userLink) return;
+  const match = userLink.href.match(/\/profile\/(\d+)/);
+  if (!match) return;
+  const userId = match[1];
 
-    const userLink = li.querySelector("a[href*='/profile/']");
-    if (!userLink) return;
-    const match = userLink.href.match(/\/profile\/(\d+)/);
-    if (!match) return;
-    const userId = match[1];
-    const userName = userLink.textContent.trim();
+  if (li.dataset.userid === userId && li.querySelector(".ci-mute-btn")) return;
 
-    li.dataset.userid = userId;
-    li.dataset.muted = cachedMuted.has(userId) ? "1" : "0";
-    li.style.display = cachedMuted.has(userId) && !showMuted ? "none" : "";
+  const userName = userLink.textContent.trim();
 
-    const oldBtn = li.querySelector(".ci-mute-btn");
-    if (oldBtn) oldBtn.remove();
-    attachMuteBtnToLi(li, userId, userName, userLink);
-  }
+  li.dataset.userid = userId;
+  li.dataset.muted = cachedMuted.has(userId) ? "1" : "0";
+  li.style.display = cachedMuted.has(userId) && !showMuted ? "none" : "";
+
+  const oldBtn = li.querySelector(".ci-mute-btn");
+  if (oldBtn) oldBtn.remove();
+  attachMuteBtnToLi(li, userId, userName, userLink);
+}
 
   function scanComments() {
     if (isProcessing) return;
